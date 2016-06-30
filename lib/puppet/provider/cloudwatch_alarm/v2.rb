@@ -1,4 +1,6 @@
 require_relative '../../../puppet_x/puppetlabs/aws.rb'
+require 'pp'
+
 
 Puppet::Type.type(:cloudwatch_alarm).provide(:v2, :parent => PuppetX::Puppetlabs::Aws) do
   confine feature: :aws
@@ -10,6 +12,7 @@ Puppet::Type.type(:cloudwatch_alarm).provide(:v2, :parent => PuppetX::Puppetlabs
       begin
         alarms = []
         cloudwatch_client(region).describe_alarms.each do |response|
+					pp response
           response.data.metric_alarms.each do |alarm|
             hash = alarm_to_hash(region, alarm)
             alarms << new(hash)
@@ -35,7 +38,7 @@ Puppet::Type.type(:cloudwatch_alarm).provide(:v2, :parent => PuppetX::Puppetlabs
   def self.alarm_to_hash(region, alarm)
     actions = alarm.alarm_actions
 
-    if actions.first.length > 0
+    unless actions.empty
       if actions.first.start_with?('arn:aws')
         response = autoscaling_client(region).describe_policies(
           policy_names: actions
