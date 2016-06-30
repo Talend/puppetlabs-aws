@@ -9,9 +9,6 @@ Puppet::Type.type(:cloudwatch_alarm).provide(:v2, :parent => PuppetX::Puppetlabs
 
   def self.instances
     regions.collect do |region|
-
-      puts 'Current region: '+region.to_s
-
       begin
         alarms = []
         cloudwatch_client(region).describe_alarms.each do |response|
@@ -19,9 +16,6 @@ Puppet::Type.type(:cloudwatch_alarm).provide(:v2, :parent => PuppetX::Puppetlabs
             hash = alarm_to_hash(region, alarm)
             alarms << new(hash)
           end
-          p 'Found alarms:'
-          pp alarms
-          puts '########'
         end
         alarms
       rescue Timeout::Error, StandardError => e
@@ -41,33 +35,19 @@ Puppet::Type.type(:cloudwatch_alarm).provide(:v2, :parent => PuppetX::Puppetlabs
   read_only(:region, :alarm_actions)
 
   def self.alarm_to_hash(region, alarm)
-    actions = alarm.alarm_actions
-    pp 'This are my alarm actions: '
-    pp actions
-    pp ' in '
-    pp region
-    unless actions.empty?
-      if actions.first.start_with?('arn:aws')
-        response = autoscaling_client(region).describe_policies(
-          policy_names: actions
-        )
-        actions = response.scaling_policies.collect(&:policy_name)
-      end
-    end
-
     {
-      name: alarm.alarm_name,
-      metric: alarm.metric_name,
-      namespace: alarm.namespace,
-      statistic: alarm.statistic,
-      period: alarm.period,
-      threshold: alarm.threshold,
-      evaluation_periods: alarm.evaluation_periods,
-      comparison_operator: alarm.comparison_operator,
-      ensure: :present,
-      alarm_actions: actions,
-      region: region,
-      dimensions: alarm.dimensions.collect { |v| { v.name => v.value} }
+        name: alarm.alarm_name,
+        metric: alarm.metric_name,
+        namespace: alarm.namespace,
+        statistic: alarm.statistic,
+        period: alarm.period,
+        threshold: alarm.threshold,
+        evaluation_periods: alarm.evaluation_periods,
+        comparison_operator: alarm.comparison_operator,
+        ensure: :present,
+        alarm_actions: alarm.alarm_actions,
+        region: region,
+        dimensions: alarm.dimensions.collect { |v| { v.name => v.value} }
     }
   end
 
@@ -84,14 +64,14 @@ Puppet::Type.type(:cloudwatch_alarm).provide(:v2, :parent => PuppetX::Puppetlabs
 
   def update
     config = {
-      alarm_name: name,
-      metric_name: resource[:metric],
-      namespace: resource[:namespace],
-      statistic: resource[:statistic],
-      period: resource[:period],
-      threshold: resource[:threshold],
-      evaluation_periods: resource[:evaluation_periods],
-      comparison_operator: resource[:comparison_operator],
+        alarm_name: name,
+        metric_name: resource[:metric],
+        namespace: resource[:namespace],
+        statistic: resource[:statistic],
+        period: resource[:period],
+        threshold: resource[:threshold],
+        evaluation_periods: resource[:evaluation_periods],
+        comparison_operator: resource[:comparison_operator],
     }
     if resource[:dimensions]
       dimensions = []
@@ -101,20 +81,7 @@ Puppet::Type.type(:cloudwatch_alarm).provide(:v2, :parent => PuppetX::Puppetlabs
       config[:dimensions] = dimensions.flatten
     end
 
-    actions = []
-    alarm_actions = resource[:alarm_actions]
-    alarm_actions = [alarm_actions] unless alarm_actions.is_a?(Array)
-    alarm_actions.reject(&:nil?).each do |action|
-      if action.start_with?('arn:aws:')
-        response = autoscaling_client(resource[:region]).describe_policies(
-          policy_names: [action]
-        )
-        action = response.data.scaling_policies.first.policy_arn
-      end
-      actions << action
-    end
-    config[:alarm_actions] = actions
-
+    config[:alarm_actions] = resource[:alarm_actions]
     cloudwatch_client(resource[:region]).put_metric_alarm(config)
   end
 
@@ -125,7 +92,7 @@ Puppet::Type.type(:cloudwatch_alarm).provide(:v2, :parent => PuppetX::Puppetlabs
   def destroy
     Puppet.info("Deleting alarm #{name} in region #{target_region}")
     cloudwatch_client(target_region).delete_alarms(
-      alarm_names: [name],
+        alarm_names: [name],
     )
     @property_hash[:ensure] = :absent
   end
