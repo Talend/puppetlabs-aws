@@ -35,7 +35,7 @@ Puppet::Type.type(:cloudwatch_alarm).provide(:v2, :parent => PuppetX::Puppetlabs
   def self.alarm_to_hash(region, alarm)
     actions = alarm.alarm_actions
 
-    if actions.first.start_with?('arn:aws')
+    if (! actions.first.nil?) && (actions.first.start_with?('arn:aws'))
       response = autoscaling_client(region).describe_policies(
         policy_names: actions
       )
