@@ -12,11 +12,11 @@ Puppet::Type.type(:cloudwatch_alarm).provide(:v2, :parent => PuppetX::Puppetlabs
       begin
         alarms = []
         cloudwatch_client(region).describe_alarms.each do |response|
-					pp response
           response.data.metric_alarms.each do |alarm|
             hash = alarm_to_hash(region, alarm)
             alarms << new(hash)
           end
+          pp alarms
         end
         alarms
       rescue Timeout::Error, StandardError => e
@@ -37,7 +37,7 @@ Puppet::Type.type(:cloudwatch_alarm).provide(:v2, :parent => PuppetX::Puppetlabs
 
   def self.alarm_to_hash(region, alarm)
     actions = alarm.alarm_actions
-
+    pp 'This are my alarm actions: '+  actions.to_s
     unless actions.empty?
       if actions.first.start_with?('arn:aws')
         response = autoscaling_client(region).describe_policies(
